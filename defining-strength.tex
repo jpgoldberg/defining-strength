@@ -1,0 +1,262 @@
+% !TEX encoding = UTF-8 Unicode
+%! program = pdflatex
+
+\documentclass[12pt]{article}
+\usepackage{amsmath}
+\usepackage{geometry} 
+\geometry{paper=letterpaper} 
+
+\usepackage[utf8]{inputenc}
+\usepackage[american]{babel}
+\usepackage{csquotes}
+\usepackage[style=apa,backend=biber]{biblatex}
+\DeclareLanguageMapping{american}{american-apa}
+
+\usepackage{epigraph}
+\setlength{\epigraphwidth}{.6\textwidth}
+
+\addbibresource{crypto.bib}
+\usepackage[standard]{ntheorem}
+\usepackage{verbatim}
+
+
+\newcommand\pwd[1]{\ensuremath{\mathtt{#1}}}
+\newcommand\func[1]{\ensuremath{#1(\cdot)}}
+\newcommand\G{\ensuremath{\mathcal{G}}}
+
+\theorembodyfont{\upshape}
+\newtheorem{intuition}{Intuition}
+
+
+\title{Defining Password Strength}
+\author{Jeffrey Goldberg\\
+AgileBits Inc.\\
+\texttt{jeff@agilebits.com}}
+
+\date{July 30, 2013} % delete this line to display the current date
+
+%%% BEGIN DOCUMENT
+\begin{document}
+
+\maketitle
+
+I set out to provide a definition of password strength which captures the intuitions we use when we talk about the strengths of passwords. We do talk about password strength a great deal. A search of Google Scholar for ``password strength’’ turned up approximately half a million results.
+
+
+There are a number of reasons \emph{not} to define password strength.
+\begin{enumerate}
+\item A password strength definition may lead people to (incorrectly) believe that password strength meters are feasible.
+\item The practical strength of a password depends on the state of cracking technology at the time it is attacked. That technology is subject to change
+\end{enumerate}
+I’ll have more to say about both of those below, but let’s put those issues on hold for the moment.
+
+
+\section{Why we should define password strength}
+
+\subsection{When one password is stronger than another}
+
+We are happy to proclaim that \pwd{
+olByWo9yIFp8NfOxSprJXX} is a stronger password than  \pwd{Password1}. And in all but the most peculiar situations\footnote{The exceptions will be when we have contrived a password distribution specifically to prove that example false. For example, if we construct our password distribution by flipping a coin. If the it comes up heads, we use \pwd{olByWo9yIFp8NfOxSprJXX}; if it comes up tails we ask a user to create a password following more typical instructions.} there will be extremely broad consensus on that. To be able to say that one password is stronger than another we need a definition of strength which allows for password strengths to be (partially) ordered.
+
+The intuition behind saying that password $w_{1}$ is stronger than password $w_{2}$ is that it will tend to take longer for an attacker to find $w_{1}$ than $w_{2}$.
+
+\begin{intuition}
+A password, $w_{1}$ is stronger than $w_{2}$ iff more guesses are required to find $w_{1}$ than to find $w_{2}$.
+\end{intuition}
+That intuition is central to the definition of Guessing Entropy given by \textcite{Massey94:ISMT} and used by \textcite{WeirETAL2010:CCS}. Our definition should capture that intuition. However, it should be noted that Guessing Entropy is a property of a distribution, not of a particular password drawn from that distribution.
+
+\subsection{When comparing with other strength measures}
+
+We commonly talk about the strength of other parts of a security system in terms of Shannon’s entropy \parencite{Shannon:48}, $H$. If stick with the same units, bits, it gives us an ability to compare password strength to other things. There are a number of times when I’ve (gently) said to people, “should you really be worrying of the difference between 128-bit AES keys and 256-bit AES keys when your password is probably less than 40 bits?”
+
+Furthermore there are (highly restricted) cases where Shannon Entropy is an appropriate measure of password strength. And in those cases, it would be convenient for our definition of password strength to correspond to Shannon Entropy.
+
+\section{Shannon Entropy}
+
+\subsection{When it is good, it is very very good}\label{sec:bits}
+
+In some circumstances we can say precisely how strong a password is. We need the password to be drawn uniformly from a set whose size we know.  Passwords created through most automated password generators should have that property; so should password’s generated through schemes like diceware \parencite{Reinhold:diceware}. Under those very limited circumstances, Shannon Entropy, $H$, is an appropriate measure. That is, under a uniform distribution the strength of a password will be the same as the entropy of the uniform distribution. In cases of a uniform distribution, just taking the base-2 logarithm of the size of the set a password is chosen from gives the the Shannon entropy of the distribution, and a useful measure of the strength of a password.
+
+Measuring strength on some logarithmic scale also has a number of advantages, not least of which is keeping the numbers manageable. Shannon Entropy wouldn’t be the only way to do this, but bits remains a convenient unit.
+
+As a reminder,
+\begin{Definition}[Entropy]\label{def:H}
+The entropy, $H(X)$, of a discrete random distribution, $X$, is
+$$H(X) = -\sum_{i=1}^n p(x_i)\log_2p(x_i)$$
+where $x_i$ is the $i$th element of $X$, and $p(x_i)$ is the probability of selecting $x_i$.
+\end{Definition}
+
+
+
+\subsection{\dots but when it is bad it is horrid}
+
+Many people, including myself, have failed to recognize that $H$ is grossly inappropriate when the distribution is not uniform. I had incorrectly assumed that $H$ would be appropriate if we could actually calculate $H$ for the kinds of non-uniform distributions that passwords are drawn from. I had thought that the only problem with using $H$ was the practical difficulty in determining the probably distributions that passwords are drawn from. I am grateful to Matthew Weir for his patience in showing me what I had wrong.
+
+One difficulty with using $H$ is that it does not tell us which password is stronger if they are both drawn from the same non-uniform distribution., If we look at the distribution implied by various password dumps, we know that  \pwd{Password1} is weaker than \pwd{olByWo9yIFp8NfOxSprJXX}, but Shannon entropy (nor Guessing entropy) is able to tell us that.
+
+More subtly, but more importantly, is that the Shannon entropy of a non-uniform distribution can lead to results that are simply not helpful will discussing the strength of passwords:
+
+\begin{quote}
+If the key is half the time “password” and half the time a true random 128-bit key, then the entropy is approximately 65 bits. Yet half the time the key may be guessed on the first try, if your first guess is “password” \dots \parencite{wikipedia:entropy}
+\end{quote}
+An example showing this kind of result is given in section~\ref{sec:examples}. It is examples like these that lead \citeauthor{WeirETAL2010:CCS} to state,
+\begin{quote}
+Even with an accurate Shannon entropy value, it would not tell the defender anything about how vulnerable a system would be to an online password cracking attack. [\cite[p.~162]{WeirETAL2010:CCS}]
+\end{quote}
+
+
+\section{Guessing Entropy}
+
+\textcite{Massey94:ISMT} offers a definition of what becomes know as ``Guessing Entropy". The spirit of Guessing Entropy will be close to crackers' hearts.\footnote{Y'all have hearts, right?} Given a distribution of passwords, $X$, the Guessing Entropy, $G(X)$ is simply the average number of guesses that the best algorithm (whatever that might be) takes for finding a password. Here I restated (with some notational difference) the formulation given by \textcite[p.~19]{Cederlog2005:Thesis}
+
+\begin{Definition}[Guessing Entropy]\label{def:G}
+The Guessing Entropy of a distribution $X$ where the values of $X$ are sorted by decreasing probability, so that if $i > j$ then $p(x_i) \geq p(x_j)$,
+$$
+G(X) = \sum_{i=0}^{\max(R(X))} p(x_i)(i+1)
+$$
+\end{Definition}
+
+\subsection{\dots but when Guessing Entropy is bad\dots}
+
+Unfortunately, as \textcite[p.~19]{Cederlog2005:Thesis} shows, $\func G$ suffers from the same problem as $\func H$ when talking about guessing passwords. It is possible to construct a distribution where the most likely value is highly probable, but you have an enormous number of very low probability values. If the number of low probability elements is large enough, then we can have a distribution with a very high guessing entropy, even though we make the mostly likely entity extremely likely. An example of this is given in section~\ref{sec:examples}.
+
+\section{What has a fat head and a long tail?}
+
+Both $\func H$ and $\func G$ suffer from the same problem, and for largely the same reason. We can always construct a distribution, $X$, for which the mostly likely value, $x_0$, is very likely, say $p(x_0)=0.9999$, but have enough other values, $x_1 \dots x_n$, to get as large a $G(X)$ or $H(X)$ as we want \parencite[ch.~4]{Cederlog2005:Thesis}. Any distribution with a sufficiently fat head and a sufficiently long tail will produce an entropy result that is counter-intuitive and unhelpful for our purposes.
+
+This problem holds for almost every plausible definition of entropy of a distribution of passwords that has been proposed or used.
+
+\subsection{Min-entropy}
+
+One alternative would be to take the so-called min-entropy of the distribution. We calculate the entropy based solely on the probability of the most likely value (the one that offers the least entropy) in the distribution and ignore everything else.  Min-entropy is the special case of Rényi entropy, $H_\alpha$ where $\alpha \to \infty$.\footnote{I specifically mention that this is an instance of R\'enyi entropy \parencite{Renyi:1960} because I can pronounce the name correctly and would like to show off that skill. It also allows me to use Rényi's notation for this, $H_\infty$, which I would otherwise have to explain. Alfréd Rényi is also the source of the line often quoted by, and misattributed to, Pál Erdős: ``A mathematician is a device for turning coffee into theorems."}
+
+\begin{Definition}[min-entropy]\label{def:minH}
+The min-entropy, $H_\infty$, of a distribution, $X$, is the negative base 2 logarithm of the probability of a most probable value in $X$.
+$$
+H_\infty(X) = -\log_2 p(x_m)
+$$
+where $x_m$ has the maximum probability in $X$, that is, $\forall x_i \in X, p(x_m) \geq p(x_i)$
+\end{Definition}
+
+There is certainly some appeal to describing the quality distribution of passwords by its weakest password. But it will fail to distinguish between a distribution with 128 values each with a probability of $1/128$ on the one hand and a distribution in which just one element has a probability of $1/128$ and the remaining $2^{512}$ values have a probability of $(1-\frac{1}{128})2^{-512}$. Each of those distributions will have the same ``worst case", but they will have very different best cases.
+
+\subsection{An example (or three)}\label{sec:examples}
+
+For the following examples, I'm going to use the same fat-headed, long-tailed, distribution, which I'll call $Q$.
+
+\begin{Definition}[Troublesome distribution, $Q$] \label{def:Q} 
+Let $Q$ be a distribution of $2^{512}+1$ values. $q_0$ has a probability of $0.9$ and all of the other values, $q_1 \dots q_n$,
+have a probability of $(1-0.9)2^{-512}$.
+\end{Definition}
+Note that my $Q$ is just an instances of $Q_n^p$ as defined by \cite{Cederlog2005:Thesis}, with $p = 0.9$ and $n=2^{512}$.
+
+Now let's calculate the various entropies for $Q$.
+
+\subsubsection{\(H(Q)\)}
+
+For Shannon Entropy, we get 51.66 bits for that distribution, despite that we would pick $q_0$ from that distribution 9 times out of 10. Most people would consider 51 bits, a good result for a password scheme.
+\begin{align}
+H(Q) &= -\left[ 0.9\log_2 0.9
+       + \sum_1^{2^{512}}\left. (1-0.9) 2^{-512}\log_2\left((1-0.9)2^{-512}\right)\right.\right]\notag \\
+     &\approx  0.13 + 51.53\notag \\
+     &\approx 51.66 \label{eq:exH}
+\end{align}
+
+\subsubsection{\(G(Q)\)}
+
+Now lets look at Guessing Entropy for $Q$, where we get a really big number (not measured in bits):
+\begin{align}
+G(Q) &= p(q_0) + \sum_{i=1}^{2^{512}} p(q_i)(i+1) \notag \\
+     & = 0.9 +  \frac{1-0.9}{2^{512}} \cdot \sum_{j=2}^{2^{512}+1}j \notag \\
+     &= 0.9 + \frac{0.1}{2^{512}} \cdot \frac{2^{512}(2^{512} +3)}{2} \notag \\
+     &= 0.9 + \frac{2^{512} + 3}{20}\notag \\
+     &\approx 2^{507.6} \label{ex:exG}
+\end{align}
+Not only does $\func G$ fail to address the problem identified for $\func H$, it appears to suffer from it to an even larger degree.
+
+\subsubsection{\(H_\infty(Q)\)}
+
+The min-entropy for $Q$ is just a faction of a bit:
+\begin{align}
+H_\infty(Q) &= -\log_2 0.9 \notag \\
+            &\approx 0.15 \label{eq:exME}
+\end{align}
+    
+
+\section{Getting particular}
+
+In trying to reduce a distribution to one number, we are simply losing too much information about the individual probabilities. So instead of trying to capture a useful measure of a distribution as a whole, we will consider the strength of single value, a password, in that distribution with respect to the distribution.
+
+Let's again consider $Q$ from Definition~\ref{def:Q}. What we can say about particular values of $Q$ is that best algorithm for searching passwords will find $q_0$ on the first guess. For all other values, $q_i; i \neg 0$, it will take on average $1+2^{511}$ guesses. Another way of putting that is that the best algorithm will have a 50\% chance after $1+2^{511}$ guesses to finding $q_i; i\neq0$ in $Q$.
+
+What this illustrates is that while we cannot take in general about how hard it is to find passwords in $Q$, we can talk very coherently about how hard it is to find a particular password in $Q$. This is the notion that I would like to build the next definition on.
+
+\begin{Definition}[Guesses Function, \(\G\)] \label{def:calG}
+$\G(p, X, k)$ is the averages number of guesses that the best algorithm needs to find $k$ in $X$ with probability $p$, where $X$ is a discrete probability distribution, $k$ is a value in $X$, and $p$ is a probability $0 \leq p \leq 1$.
+\end{Definition}
+
+Using this definition, we can say things like, $\G(1.0, Q, q_0) = 1$ and $\G(0.5, Q, q_{i\neq 0}) = 2^{511}$.
+
+As described in section~\ref{sec:bits} it would be nice to use bits as a measure and to have a strength definition which does correspond to $H$ in those cases where Shannon Entropy is appropriate. So we can define strength, $S$ as
+
+\begin{Definition}[Password Strength] \label{def:S}
+The strength of a password, $w$, with respect to a distribution, $X$ is given by
+$$
+S(w, X) =  1 + \log_2\G(0.5, X, w)
+$$
+\end{Definition}
+
+\subsection{What does this definition do for us?}
+
+This definition has limited practical utility, but I believe that it has enough to merit its existence.
+
+\begin{enumerate}
+\item It captures the fact that the strength of a password is a function of \emph{both} the password itself and the distribution it is drawn from.
+
+\item It's units, bits, are commensurable with those used elsewhere in information. security. 
+
+\item It gives us some grounding on what we mean when we say that some password is stronger than another.
+
+\item It is a measure of how difficult it is to crack the password.
+
+\end{enumerate}
+
+\subsection{What doesn't this definition do for us?}
+
+\begin{enumerate}
+\item It is not a constructive definition. It does not enable use to calculate the strength of a password in most normal circumstances.
+
+\item It depends on some known unknowns.
+    \begin{enumerate}
+    \item ``Best algorithm'' has been left vague.
+    \item Human generated passwords come from a distribution that we can only guess at.
+    \end{enumerate}
+    
+\item It may be mathematical masturbation, in that it is providing a formalism of limited utility for an already intuitive concept.
+\end{enumerate}
+
+\subsection{When the best algorithm doesn't look under the light}
+
+\epigraph{A drunk was searching the ground under a street lamp. A police officer asked him what we was doing. ``I'm looking for my wallet,'' answered the drunk and went on to explain, ``I think I lost it in that alley over there."  ``So why are you looking over here?" asks the cop. ``Well,'' explains the drunk, ``the light is better here."}{Old joke} 
+
+With the definitions of $\G$ and $G$, we've assumed that the ``best'' cracking algorithm is one which guesses, in sequence, passwords in order of their likelihood. This notion of best algorithm ignores practical realities of crackers, which may find it more efficient in time to pursue different sequences.  For example, it may be more efficient to guess variants of \pwd{password} before moving on to \pwd{secret} and its variants. Or it might be faster to process all fixed strings first and them move on to variants. In either case, one may get a faster real crack time by following a sequence other than what is used in the definition of $\G$.
+
+I don't see this is a substantial problem. We need a definition which is not dependent on today's cracking technology. But it should be noted that that even if $S(w_1, X) > S(w_2, X)$ it may still be the case that $w_1$ is easier to crack than $w_2$ given a particular cracking tool optimized for actual software and hardware.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\newpage
+\printbibliography
+\end{document}
